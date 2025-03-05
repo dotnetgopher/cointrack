@@ -3,9 +3,11 @@ package dataprovider
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
+	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 type EthDataProvider struct {
@@ -31,11 +33,12 @@ type EtherScanTransactionList struct {
 type EtherScanTransaction struct {
 	TimeStamp string `json:"timeStamp"`
 	From      string `json:"from"`
+	Symbol string 
 	To        string `json:"to"`
 	Value     string `json:"value"`
 }
 
-func (d *EthDataProvider) GetListTransactions(ctx context.Context, address string) ([]transaction, error) {
+func (d *EthDataProvider) GetListTransactions(ctx context.Context, address string) ([]Transactions, error) {
 	url, err := url.ParseRequestURI(d.baseAddress)
 	if err != nil {
 		// ignore
@@ -57,8 +60,19 @@ func (d *EthDataProvider) GetListTransactions(ctx context.Context, address strin
 	resp, err := http.DefaultClient.Do(req)
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	var txList EtherScanTransactionList
 	json.Unmarshal(body, &txList)
-	
+
+	result := make([]Transaction, 0)
+	for _, tx := range txList.Transactions {
+		amount, err := strconv.ParseFloat(tx.Value, 0)
+		if err != nil {
+			//ignored
+		}
+
+		timestamp := strconv.ParseInt(amount)
+
+		t := NewTransaction(tx.From,tx.To,tx.TimeStamp, "eth", amount / math.Pow(10, 18))
+	}
 }
